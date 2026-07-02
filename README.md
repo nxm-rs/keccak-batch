@@ -1,13 +1,13 @@
 # keccak-batch
 
-Batched Keccak-256 with runtime-dispatched SIMD, for workloads that hash many
-independent inputs: Merkle trees, redistribution sampling, proof systems.
+[![crates.io](https://img.shields.io/crates/v/keccak-batch.svg)](https://crates.io/crates/keccak-batch)
+[![docs.rs](https://img.shields.io/docsrs/keccak-batch)](https://docs.rs/keccak-batch)
+[![CI](https://github.com/nxm-rs/keccak-batch/actions/workflows/ci.yml/badge.svg)](https://github.com/nxm-rs/keccak-batch/actions/workflows/ci.yml)
+[![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 
-Keccak does not vectorise by speeding up a single permutation (25 lanes, 25
-distinct rotation offsets, no vector rotate on most ISAs). It vectorises by
-running several **independent** hashes at once, one per SIMD lane. This crate
-exposes that as a batch API and picks the widest backend the running CPU
-supports.
+**Batched Keccak-256 with runtime-dispatched SIMD, for workloads that hash many independent inputs.** Merkle trees, redistribution sampling, proof systems: anywhere the bottleneck is a large fan of small hashes rather than one long message.
+
+Keccak does not vectorise by speeding up a single permutation (25 lanes, 25 distinct rotation offsets, no vector rotate on most ISAs). It vectorises by running several **independent** hashes at once, one per SIMD lane. This crate exposes that as a batch API and picks the widest backend the running CPU supports.
 
 | width | backend | targets |
 |------:|---------|---------|
@@ -16,8 +16,18 @@ supports.
 | 2 | SSE2 / NEON / wasm `simd128` | x86-64, aarch64, wasm |
 | 1 | scalar | everywhere |
 
-All hashing uses legacy Keccak padding (`0x01` domain byte), i.e. Ethereum /
-Swarm Keccak-256, **not** FIPS-202 SHA3 (`0x06`).
+All hashing uses legacy Keccak padding (`0x01` domain byte), i.e. Ethereum / Swarm Keccak-256, **not** FIPS-202 SHA3 (`0x06`).
+
+Built under [nxm-rs](https://github.com/nxm-rs). It is the batched hash primitive behind the Binary Merkle Tree in [nectar](https://github.com/nxm-rs/nectar), where every chunk address is a Keccak-256 Merkle root over 128 leaves: exactly the many-small-hashes shape this crate is for. It stands alone with no Swarm dependency and is useful to anyone hashing a fan of equal-length inputs.
+
+> **Pre-release** and under active development, tracking towards a first crates.io release.
+
+## Install
+
+```toml
+[dependencies]
+keccak-batch = "0.1"
+```
 
 ## Usage
 
@@ -39,17 +49,13 @@ let b = [1u8; 64];
 let digests = keccak256_many::<2>(&[&a, &b]);
 ```
 
-`keccak256_many` (and the slice form `keccak256_many_into`) require every input
-in the batch to be the same length; they absorb in lockstep. Batches of any
-count are split across the available width automatically (e.g. 64 leaves at
-width 8 run as eight 8-wide permutations). `degree()` reports the active width.
+`keccak256_many` (and the slice form `keccak256_many_into`) require every input in the batch to be the same length; they absorb in lockstep. Batches of any count are split across the available width automatically (e.g. 64 leaves at width 8 run as eight 8-wide permutations). `degree()` reports the active width.
+
+The `digest` feature (on by default) exposes the RustCrypto `digest` traits on `Keccak256`, so it drops into anything generic over `digest::Digest`.
 
 ## Performance
 
-Speedup over this crate's own scalar path, per batched hash. The BMT-node case
-(64-byte inputs, one permutation each) is the redistribution / Merkle-leaf hot
-path; measured on a Zen-class AVX-512 part with `cargo run --release --example
-perf`:
+Speedup over this crate's own scalar path, per batched hash. The BMT-node case (64-byte inputs, one permutation each) is the redistribution / Merkle-leaf hot path; measured on a Zen-class AVX-512 part with `cargo run --release --example perf`:
 
 | width | 64-byte inputs | 4 KiB inputs |
 |------:|---------------:|-------------:|
@@ -57,24 +63,15 @@ perf`:
 | 4 (AVX2)    | ~3.1x | ~2.7x |
 | 2 (SSE2/NEON/wasm) | ~1.7x | ~1.5x |
 
-For calibration against external baselines (same machine, same harness): this
-crate's scalar path is at parity with `tiny-keccak`, and `keccak-asm` (the
-assembly backend behind alloy's `asm-keccak` feature) is ~1.3x faster than
-either scalar. The 8-wide batch is still ~5.5x faster per hash than
-`keccak-asm`, so the batch win survives against the strongest scalar baseline.
+For calibration against external baselines (same machine, same harness): this crate's scalar path is at parity with `tiny-keccak`, and `keccak-asm` (the assembly backend behind alloy's `asm-keccak` feature) is ~1.3x faster than either scalar. The 8-wide batch is still ~5.5x faster per hash than `keccak-asm`, so the batch win survives against the strongest scalar baseline.
 
-The permutation is written once, generic over a `Lane` type; only a ~6-op lane
-backend is per-instruction-set. Passing the 25-lane state by value and unrolling
-rho/pi keeps every lane in a vector register (without it the SIMD widths lose to
-scalar).
+The permutation is written once, generic over a `Lane` type; only a ~6-op lane backend is per-instruction-set. Passing the 25-lane state by value and unrolling rho/pi keeps every lane in a vector register (without it the SIMD widths lose to scalar).
 
-`KECCAK_BATCH_NO_AVX512` / `KECCAK_BATCH_NO_AVX2` (env, any value) cap the
-backend at runtime, e.g. to avoid AVX-512 downclocking on some parts.
+`KECCAK_BATCH_NO_AVX512` / `KECCAK_BATCH_NO_AVX2` (env, any value) cap the backend at runtime, e.g. to avoid AVX-512 downclocking on some parts.
 
 ## wasm
 
-The 2-wide backend uses `core::arch::wasm32` and is compiled only when
-`simd128` is statically enabled:
+The 2-wide backend uses `core::arch::wasm32` and is compiled only when `simd128` is statically enabled:
 
 ```sh
 RUSTFLAGS="-C target-feature=+simd128" cargo build --target wasm32-unknown-unknown
@@ -84,8 +81,7 @@ Without it, wasm builds run the scalar path.
 
 ### Benchmarking wasm
 
-The `perf` example runs under `wasmtime` on the `wasm32-wasip1` target (the
-`.cargo/config.toml` runner is wired up, and `nix develop` provides wasmtime):
+The `perf` example runs under `wasmtime` on the `wasm32-wasip1` target (the `.cargo/config.toml` runner is wired up, and `nix develop` provides wasmtime):
 
 ```sh
 # scalar wasm
@@ -94,23 +90,30 @@ cargo run --release --example perf --target wasm32-wasip1
 RUSTFLAGS="-C target-feature=+simd128" cargo run --release --example perf --target wasm32-wasip1
 ```
 
-Measured (wasmtime): the 64-byte BMT-node hash is ~379 ns scalar vs ~222 ns
-with simd128, a ~1.7x batch-2 win, matching the native SSE2/NEON path. Without
-simd128 the batch API falls back to scalar (no speedup).
+Measured (wasmtime): the 64-byte BMT-node hash is ~379 ns scalar vs ~222 ns with simd128, a ~1.7x batch-2 win, matching the native SSE2/NEON path. Without simd128 the batch API falls back to scalar (no speedup).
 
 ## Testing
 
-Correctness is pinned three ways: hardcoded known-answer vectors; a proptest
-against an independent Keccak-256 (`tiny_keccak`) over lengths spanning the
-rate-block boundaries; and a cross-check of every SIMD backend available on the
-host against that same oracle. Run `cargo test`.
+Correctness is pinned three ways: hardcoded known-answer vectors; a proptest against an independent Keccak-256 (`tiny_keccak`) over lengths spanning the rate-block boundaries; and a cross-check of every SIMD backend available on the host against that same oracle. Run `cargo test`.
 
 ## Development
 
-`nix develop` (or `direnv allow`) drops you into the pinned toolchain with the
-wasm target. Otherwise use a Rust 1.92 toolchain with the `wasm32-unknown-unknown`
-target added.
+`nix develop` (or `direnv allow`) drops you into the pinned toolchain with the wasm target. Otherwise use a Rust 1.92 toolchain with the `wasm32-unknown-unknown` target added.
+
+`cargo fmt --all` and `cargo clippy --all-targets --all-features -- -D warnings` are required pre-commit and gate CI; library paths carry `unwrap`/`expect` denials. CI also runs the wasm builds (with and without `simd128`), the wasm perf example on `wasm32-wasip1`, and a `cargo-shear` unused-dependency check.
+
+## Contributing
+
+Open an issue before non-trivial PRs. Conventional Commits, `cargo fmt`, `cargo clippy -- -D warnings`, tests for behaviour changes.
+
+## Security
+
+See [SECURITY.md](https://github.com/nxm-rs/.github/blob/main/SECURITY.md) or email `security@nxm.rs`.
 
 ## Licence
 
 AGPL-3.0-or-later. See [LICENSE](LICENSE).
+
+```
+●  AGPL-3.0  ·  pre-release  ·  Keccak-256 (legacy 0x01)
+```
