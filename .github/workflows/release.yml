@@ -13,9 +13,12 @@ jobs:
     env:
       CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@1.92
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      # Pinned to a commit SHA; the toolchain is otherwise inferred from the
+      # tag ref, so it is passed explicitly here.
+      - uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88 # master
         with:
+          toolchain: "1.92"
           components: rustfmt, clippy
           targets: wasm32-unknown-unknown
       - run: cargo fmt --all --check
@@ -27,6 +30,6 @@ jobs:
         if: ${{ env.CARGO_REGISTRY_TOKEN != '' }}
         run: cargo publish
       - name: GitHub release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
           generate_release_notes: true

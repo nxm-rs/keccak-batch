@@ -59,12 +59,18 @@ fn self_check() {
     );
 
     for &len in &[0usize, 1, 63, 64, 135, 136, 137, 272, 400] {
-        let inputs: Vec<Vec<u8>> = (0..17).map(|s| vec![(s as u8).wrapping_mul(31); len]).collect();
+        let inputs: Vec<Vec<u8>> = (0..17)
+            .map(|s| vec![(s as u8).wrapping_mul(31); len])
+            .collect();
         let slices: Vec<&[u8]> = inputs.iter().map(|v| v.as_slice()).collect();
         let mut got = vec![[0u8; 32]; inputs.len()];
         keccak256_many_into(&slices, &mut got);
         for (s, input) in inputs.iter().enumerate() {
-            assert_eq!(got[s], keccak256(input), "batch != scalar at len {len}, lane {s}");
+            assert_eq!(
+                got[s],
+                keccak256(input),
+                "batch != scalar at len {len}, lane {s}"
+            );
         }
     }
     println!("self-check: ok");

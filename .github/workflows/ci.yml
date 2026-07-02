@@ -12,9 +12,12 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@1.92
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      # Pinned to a commit SHA; the toolchain is otherwise inferred from the
+      # tag ref, so it is passed explicitly here.
+      - uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88 # master
         with:
+          toolchain: "1.92"
           components: rustfmt, clippy
           targets: wasm32-unknown-unknown, wasm32-wasip1
       - run: cargo fmt --all --check
