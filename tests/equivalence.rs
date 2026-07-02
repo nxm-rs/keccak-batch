@@ -1,5 +1,10 @@
 //! Property tests for the public API against an independent oracle
 //! (`tiny_keccak`), plus batch-vs-single and streaming-split consistency.
+//!
+//! Compiled out under miri: proptest's RNG and failure persistence do not fit
+//! the interpreter, and the deterministic oracle tests in `dispatch` cover the
+//! same boundary lengths there.
+#![cfg(not(miri))]
 
 use keccak_batch::{Keccak256, keccak256, keccak256_many_into};
 use proptest::prelude::*;

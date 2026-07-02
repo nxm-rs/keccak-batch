@@ -105,6 +105,11 @@ against an independent Keccak-256 (`tiny_keccak`) over lengths spanning the
 rate-block boundaries; and a cross-check of every SIMD backend available on the
 host against that same oracle. Run `cargo test`.
 
+For undefined-behaviour checking, `nix develop .#miri --command cargo miri
+test` runs the suite under the miri interpreter: the scalar core and the SSE2
+2-wide kernel are exercised (miri ships SSE2 shims); the AVX2 and AVX-512
+kernels are skipped there and remain covered by the native oracle tests.
+
 ## Development
 
 `nix develop` (or `direnv allow`) drops you into the pinned toolchain with the

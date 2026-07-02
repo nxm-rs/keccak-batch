@@ -144,8 +144,10 @@ fn dispatch(cw: usize, inputs: &[&[u8]], out: &mut [[u8; 32]]) {
 #[cfg(target_arch = "x86_64")]
 fn detected_degree() -> usize {
     use std::sync::atomic::{AtomicU8, Ordering};
-    // Miri cannot execute vendor intrinsics; force the scalar path so the test
-    // suite stays miri-checkable.
+    // Under miri, keep the public path on the scalar backend: cpuid-based
+    // detection is unavailable there, and miri's vendor-intrinsic coverage is
+    // partial (SSE2 yes, AVX-512 no). The SSE2 kernel is still miri-checked
+    // directly by the backend tests.
     if cfg!(miri) {
         return 1;
     }
@@ -266,12 +268,10 @@ mod backend_tests {
     }
 
     /// Widths whose backend is both compiled for this target and supported by
-    /// the running CPU. Under miri only the scalar width is executable.
+    /// the running CPU (or, under miri, by the interpreter: miri ships SSE2
+    /// shims, so the 2-wide kernel is checkable; AVX-512 is not).
     fn available_widths() -> Vec<usize> {
         let mut w = vec![1usize];
-        if cfg!(miri) {
-            return w;
-        }
         #[cfg(any(
             target_arch = "x86_64",
             target_arch = "aarch64",
@@ -280,21 +280,32 @@ mod backend_tests {
         w.push(2);
         #[cfg(target_arch = "x86_64")]
         {
-            if is_x86_feature_detected!("avx2") {
+            if !cfg!(miri) && is_x86_feature_detected!("avx2") {
                 w.push(4);
             }
-            if is_x86_feature_detected!("avx512f") {
+            if !cfg!(miri) && is_x86_feature_detected!("avx512f") {
                 w.push(8);
             }
         }
         w
     }
 
+    /// Boundary-class subset of [`LENS`] for miri, which interprets ~100x
+    /// slower: empty, sub-word, word-aligned, the 64-byte BMT node and both
+    /// neighbours, the rate boundary and both neighbours, exactly two blocks,
+    /// and a multi-block tail.
+    const MIRI_LENS: &[usize] = &[0, 1, 8, 63, 64, 65, 135, 136, 137, 272, 400];
+
     #[test]
     fn every_backend_matches_oracle() {
+        let (lens, seeds): (&[usize], u64) = if cfg!(miri) {
+            (MIRI_LENS, 1)
+        } else {
+            (LENS, 8)
+        };
         for &w in &available_widths() {
-            for &len in LENS {
-                for seed in 0..8u64 {
+            for &len in lens {
+                for seed in 0..seeds {
                     check_width(w, len, seed.wrapping_mul(0xdead_beef));
                 }
             }
@@ -304,8 +315,13 @@ mod backend_tests {
     #[test]
     fn public_many_matches_oracle_odd_counts() {
         // Counts that force the greedy chunker to mix widths (e.g. 7 = 4+2+1).
-        for n in [1usize, 2, 3, 5, 7, 11, 16, 31, 64] {
-            for &len in &[0usize, 64, 136, 300] {
+        let (counts, lens): (&[usize], &[usize]) = if cfg!(miri) {
+            (&[1, 2, 3, 7, 16], &[0, 64, 137])
+        } else {
+            (&[1, 2, 3, 5, 7, 11, 16, 31, 64], &[0, 64, 136, 300])
+        };
+        for &n in counts {
+            for &len in lens {
                 let inputs: Vec<Vec<u8>> = (0..n)
                     .map(|s| {
                         let mut v = vec![0u8; len];

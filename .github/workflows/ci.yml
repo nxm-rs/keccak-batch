@@ -40,3 +40,16 @@ jobs:
         run: cargo build --release --example perf --target wasm32-wasip1
         env:
           RUSTFLAGS: "-C target-feature=+simd128"
+
+  # UB checking under the miri interpreter: the scalar core plus the SSE2
+  # 2-wide kernel (miri ships SSE2 shims; AVX2/AVX-512 kernels are skipped by
+  # runtime detection there). Not a required status check.
+  miri:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88 # master
+        with:
+          toolchain: nightly
+          components: miri
+      - run: cargo miri test
