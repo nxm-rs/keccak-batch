@@ -3,12 +3,23 @@ name = "keccak-batch"
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.92"
+authors = ["Nexum Contributors"]
 license = "AGPL-3.0-or-later"
 description = "Batched Keccak-256 (legacy 0x01 padding) with runtime-dispatched SIMD: scalar, 2-way (SSE2/NEON/wasm-simd128), 4-way (AVX2), 8-way (AVX-512)."
 repository = "https://github.com/nxm-rs/keccak-batch"
 readme = "README.md"
 keywords = ["keccak", "simd", "hash", "batch", "swarm"]
 categories = ["cryptography", "wasm"]
+# Ship source, docs, and licence to crates.io; leave repo tooling out of the
+# published tarball.
+exclude = [
+    "/.github",
+    "/.cargo",
+    "/.envrc",
+    "/flake.nix",
+    "/flake.lock",
+    "/rust-toolchain.toml",
+]
 
 [dependencies]
 digest = { version = "0.11", optional = true }
@@ -40,3 +51,10 @@ opt-level = 3
 [lints.rust]
 unsafe_op_in_unsafe_fn = "deny"
 missing_docs = "warn"
+
+[lints.clippy]
+# No silent panics on a library path. The SIMD kernels index fixed-size state
+# arrays whose bounds hold at compile time, so `indexing_slicing` is left off
+# (it would fight the permutation hot path without catching a real bug).
+unwrap_used = "warn"
+expect_used = "warn"
