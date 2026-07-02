@@ -9,11 +9,28 @@
 use crate::lane::Scalar;
 use crate::sponge::keccak256_batch;
 
-/// Hash `N` equal-length messages, returning `N` digests.
+/// Hash `N` equal-length messages in one batch, returning `N` digests.
+///
+/// `N` must be at least 2. This is the batching entry point, and a single hash
+/// has nothing to batch, so `keccak256_many::<1>` (or `::<0>`) is a **compile
+/// error**: use [`keccak256`](crate::keccak256) or [`Keccak256`](crate::Keccak256)
+/// for one input, and [`keccak256_many_into`] when the count is only known at
+/// runtime.
 ///
 /// Every input must be the same length. Panics otherwise.
+///
+/// ```compile_fail
+/// // A single input is not a batch; this does not compile.
+/// let _ = keccak_batch::keccak256_many::<1>(&[b"x".as_slice()]);
+/// ```
 #[inline]
 pub fn keccak256_many<const N: usize>(inputs: &[&[u8]; N]) -> [[u8; 32]; N] {
+    const {
+        assert!(
+            N >= 2,
+            "keccak256_many is for batches of 2 or more; use keccak256 (or Keccak256) for a single input",
+        )
+    }
     let mut out = [[0u8; 32]; N];
     keccak256_many_into(inputs, &mut out);
     out
@@ -21,9 +38,14 @@ pub fn keccak256_many<const N: usize>(inputs: &[&[u8]; N]) -> [[u8; 32]; N] {
 
 /// Hash a slice of equal-length messages into `out` (`inputs.len() == out.len()`).
 ///
-/// Every input must be the same length. Panics otherwise. This is the
-/// variable-count entry the BMT level passes use; [`keccak256_many`] is the
-/// fixed-`N` convenience over it.
+/// The runtime-count batch entry: any number of inputs is accepted and split
+/// greedily across the widest available backend. A count of 0 or 1 is valid and
+/// just runs the scalar path, so callers whose length is data-driven (e.g. a BMT
+/// level that narrows to a single node) need no special case. Prefer
+/// [`keccak256`](crate::keccak256) when the input is known to be single; reach
+/// for the fixed-`N` [`keccak256_many`] when the batch size is a constant.
+///
+/// Every input must be the same length. Panics otherwise.
 pub fn keccak256_many_into(inputs: &[&[u8]], out: &mut [[u8; 32]]) {
     assert_eq!(
         inputs.len(),
