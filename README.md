@@ -107,4 +107,4 @@ target added.
 
 ## Licence
 
-MIT OR Apache-2.0.
+AGPL-3.0-or-later. See [LICENSE](LICENSE).

@@ -3,12 +3,12 @@ name = "keccak-batch"
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.92"
-license = "MIT OR Apache-2.0"
+license = "AGPL-3.0-or-later"
 description = "Batched Keccak-256 (legacy 0x01 padding) with runtime-dispatched SIMD: scalar, 2-way (SSE2/NEON/wasm-simd128), 4-way (AVX2), 8-way (AVX-512)."
 repository = "https://github.com/nxm-rs/keccak-batch"
 readme = "README.md"
 keywords = ["keccak", "simd", "hash", "batch", "swarm"]
-categories = ["cryptography", "no-std"]
+categories = ["cryptography", "wasm"]
 
 [dependencies]
 digest = { version = "0.11", optional = true }
