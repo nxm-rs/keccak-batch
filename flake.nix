@@ -17,6 +17,12 @@
         # components, and the wasm32 target), so the flake and a bare
         # `rustup`-style build agree.
         rustToolchain = pkgs.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml;
+
+        # Miri is nightly-only; used by the `miri` dev shell for UB checking.
+        miriToolchain = pkgs.rust-bin.selectLatestNightlyWith (toolchain:
+          toolchain.default.override {
+            extensions = [ "miri" "rust-src" ];
+          });
       in
       {
         devShells.default = pkgs.mkShell {
@@ -37,6 +43,18 @@
           '';
 
           RUST_BACKTRACE = "1";
+        };
+
+        # `nix develop .#miri` - nightly with the miri interpreter for UB
+        # checking of the safe core and the SSE2/AVX2 kernels (AVX-512 is not
+        # supported by miri).
+        devShells.miri = pkgs.mkShell {
+          name = "keccak-batch-miri";
+          buildInputs = [ miriToolchain pkgs.git ];
+          shellHook = ''
+            echo "keccak-batch miri shell - $(rustc --version)"
+            echo "run: cargo miri test"
+          '';
         };
 
         packages.default = rustToolchain;
