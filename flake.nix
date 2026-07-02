@@ -25,6 +25,8 @@
           buildInputs = with pkgs; [
             rustToolchain
             cargo-nextest # test runner
+            cargo-release # cut releases (see RELEASING.md)
+            git-cliff # changelog generation, driven by cargo-release
             wasmtime # run/bench the wasm build
             git
           ];

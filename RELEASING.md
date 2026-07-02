@@ -14,7 +14,7 @@ The crate is at `0.x`, so a `minor` bump is the normal release level and may car
 - Your hardware signing key (YubiKey) unlocked in the gpg-agent, so cargo-release can create the signed release commit and signed `vX.Y.Z` tag without prompting.
 - A clean checkout of `main` with no uncommitted changes, up to date with the remote.
 - CI green on the commit you are about to release.
-- `cargo-release` and `git-cliff` installed locally. On the Nix dev shell: `nix-shell -p cargo-release git-cliff`.
+- `cargo-release` and `git-cliff` on the PATH. The repo dev shell (`nix develop`, or direnv) provides both; outside it, `nix-shell -p cargo-release git-cliff` works.
 
 ## Cutting a release
 
