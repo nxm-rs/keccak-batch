@@ -19,6 +19,9 @@ exclude = [
     "/flake.nix",
     "/flake.lock",
     "/rust-toolchain.toml",
+    "/release.toml",
+    "/cliff.toml",
+    "/RELEASING.md",
 ]
 
 [dependencies]

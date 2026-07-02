@@ -1,0 +1,45 @@
+# Configuration file for [`cargo-release`](https://github.com/crate-ci/cargo-release)
+# See: https://github.com/crate-ci/cargo-release/blob/master/docs/reference.md
+#
+# Releases are cut locally by a maintainer. The maintainer signs commits and
+# tags with a hardware key (YubiKey) and runs `cargo release <level> --execute`
+# from a clean `main`; publishing to crates.io happens as part of that local
+# run. The tag push then triggers `.github/workflows/release.yml`, which only
+# re-runs the checks and creates the GitHub release. See RELEASING.md.
+
+# Only release from the default branch.
+allow-branch = ["main"]
+
+# Maintainer signs both the release commit and the tag with their hardware key.
+sign-commit = true
+sign-tag = true
+
+# Publish to crates.io and push the release commit + tag to the remote.
+publish = true
+push = true
+
+pre-release-commit-message = "chore(release): {{version}}"
+
+# Tag as `vX.Y.Z`.
+tag-prefix = ""
+tag-name = "v{{version}}"
+tag-message = "chore(release): {{version}}"
+
+# Regenerate the changelog from conventional commits via git-cliff before the
+# release commit is created. The `WORKSPACE_ROOT` env var (set by
+# cargo-release) targets the repository CHANGELOG, and `DRY_RUN` lets a dry run
+# skip the write. `--tag` makes git-cliff treat the in-progress version as
+# released so the new section is materialised.
+pre-release-hook = [
+    "bash",
+    "-c",
+    '''
+    set -euo pipefail
+    cmd=(git-cliff --config "$WORKSPACE_ROOT/cliff.toml" --repository "$WORKSPACE_ROOT" --tag "{{version}}" --output "$WORKSPACE_ROOT/CHANGELOG.md")
+    if [ "${DRY_RUN:-false}" = "true" ]; then
+        echo "dry run: skipping changelog regeneration: ${cmd[*]}" >&2
+    else
+        "${cmd[@]}"
+    fi
+    ''',
+]

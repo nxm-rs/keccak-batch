@@ -1,5 +1,8 @@
 name: Release
 
+# Publishing to crates.io happens locally via `cargo release` (see
+# RELEASING.md); the pushed tag only re-runs the checks and creates the
+# GitHub release.
 on:
   push:
     tags: ["v*"]
@@ -10,8 +13,6 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
-    env:
-      CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
       # Pinned to a commit SHA; the toolchain is otherwise inferred from the
@@ -24,11 +25,6 @@ jobs:
       - run: cargo fmt --all --check
       - run: cargo clippy --all-targets --all-features -- -D warnings
       - run: cargo test --all-features
-      # Publishes only when a crates.io token secret is configured; otherwise
-      # the tag still produces a GitHub release below.
-      - name: Publish to crates.io
-        if: ${{ env.CARGO_REGISTRY_TOKEN != '' }}
-        run: cargo publish
       - name: GitHub release
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
