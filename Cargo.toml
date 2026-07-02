@@ -16,6 +16,10 @@ digest = { version = "0.11", optional = true }
 [dev-dependencies]
 tiny-keccak = { version = "2.0", features = ["keccak"] }
 hex-literal = "1.0"
+
+# criterion and proptest pull in host-only crates (wait-timeout, rusty-fork),
+# so gate them off wasm; the perf example must still build for wasm32.
+[target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
 proptest = "1"
 criterion = "0.7"
 

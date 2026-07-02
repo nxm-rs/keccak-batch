@@ -25,13 +25,15 @@
           buildInputs = with pkgs; [
             rustToolchain
             cargo-nextest # test runner
+            wasmtime # run/bench the wasm build
             git
           ];
 
           shellHook = ''
-            echo "keccak-batch dev shell — $(rustc --version)"
+            echo "keccak-batch dev shell - $(rustc --version)"
             echo "native:  cargo test    |    cargo clippy --all-targets --all-features"
             echo "wasm:    cargo build --target wasm32-unknown-unknown [+simd128]"
+            echo "wasm run: cargo run --release --example perf --target wasm32-wasip1"
           '';
 
           RUST_BACKTRACE = "1";

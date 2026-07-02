@@ -76,6 +76,22 @@ RUSTFLAGS="-C target-feature=+simd128" cargo build --target wasm32-unknown-unkno
 
 Without it, wasm builds run the scalar path.
 
+### Benchmarking wasm
+
+The `perf` example runs under `wasmtime` on the `wasm32-wasip1` target (the
+`.cargo/config.toml` runner is wired up, and `nix develop` provides wasmtime):
+
+```sh
+# scalar wasm
+cargo run --release --example perf --target wasm32-wasip1
+# simd128 batch-2 wasm
+RUSTFLAGS="-C target-feature=+simd128" cargo run --release --example perf --target wasm32-wasip1
+```
+
+Measured (wasmtime): the 64-byte BMT-node hash is ~379 ns scalar vs ~222 ns
+with simd128, a ~1.7x batch-2 win, matching the native SSE2/NEON path. Without
+simd128 the batch API falls back to scalar (no speedup).
+
 ## Testing
 
 Correctness is pinned three ways: hardcoded known-answer vectors; a proptest
