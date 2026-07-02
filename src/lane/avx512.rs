@@ -59,6 +59,7 @@ unsafe impl Lane for U64x8 {
 
     #[inline(always)]
     unsafe fn rotl(self, n: u32) -> Self {
+        debug_assert!((1..64).contains(&n), "rotl amount must be in 1..=63");
         U64x8(unsafe { _mm512_rolv_epi64(self.0, _mm512_set1_epi64(n as i64)) })
     }
 }

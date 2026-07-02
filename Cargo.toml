@@ -16,6 +16,8 @@ digest = { version = "0.11", optional = true }
 [dev-dependencies]
 tiny-keccak = { version = "2.0", features = ["keccak"] }
 hex-literal = "1.0"
+# For the digest-trait conformance test (the optional dep is default-on).
+digest = "0.11"
 
 # criterion and proptest pull in host-only crates (wait-timeout, rusty-fork),
 # so gate them off wasm; the perf example must still build for wasm32.

@@ -39,6 +39,7 @@ unsafe impl Lane for Scalar {
 
     #[inline(always)]
     unsafe fn rotl(self, n: u32) -> Self {
+        debug_assert!((1..64).contains(&n), "rotl amount must be in 1..=63");
         Scalar(self.0.rotate_left(n))
     }
 }

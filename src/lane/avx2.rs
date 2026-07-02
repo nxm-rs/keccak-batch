@@ -49,6 +49,7 @@ unsafe impl Lane for U64x4 {
 
     #[inline(always)]
     unsafe fn rotl(self, n: u32) -> Self {
+        debug_assert!((1..64).contains(&n), "rotl amount must be in 1..=63");
         unsafe {
             let l = _mm_cvtsi64_si128(n as i64);
             let r = _mm_cvtsi64_si128((64 - n) as i64);

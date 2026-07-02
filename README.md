@@ -57,6 +57,12 @@ perf`:
 | 4 (AVX2)    | ~3.1x | ~2.7x |
 | 2 (SSE2/NEON/wasm) | ~1.7x | ~1.5x |
 
+For calibration against external baselines (same machine, same harness): this
+crate's scalar path is at parity with `tiny-keccak`, and `keccak-asm` (the
+assembly backend behind alloy's `asm-keccak` feature) is ~1.3x faster than
+either scalar. The 8-wide batch is still ~5.5x faster per hash than
+`keccak-asm`, so the batch win survives against the strongest scalar baseline.
+
 The permutation is written once, generic over a `Lane` type; only a ~6-op lane
 backend is per-instruction-set. Passing the 25-lane state by value and unrolling
 rho/pi keeps every lane in a vector register (without it the SIMD widths lose to

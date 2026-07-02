@@ -55,6 +55,7 @@ unsafe impl Lane for U64x2 {
 
     #[inline(always)]
     unsafe fn rotl(self, n: u32) -> Self {
+        debug_assert!((1..64).contains(&n), "rotl amount must be in 1..=63");
         use core::arch::x86_64::{_mm_cvtsi64_si128, _mm_or_si128, _mm_sll_epi64, _mm_srl_epi64};
         unsafe {
             let l = _mm_cvtsi64_si128(n as i64);
@@ -110,6 +111,7 @@ unsafe impl Lane for U64x2 {
 
     #[inline(always)]
     unsafe fn rotl(self, n: u32) -> Self {
+        debug_assert!((1..64).contains(&n), "rotl amount must be in 1..=63");
         use core::arch::aarch64::{vdupq_n_s64, vorrq_u64, vshlq_u64};
         unsafe {
             let left = vshlq_u64(self.0, vdupq_n_s64(n as i64));
@@ -162,6 +164,7 @@ unsafe impl Lane for U64x2 {
 
     #[inline(always)]
     unsafe fn rotl(self, n: u32) -> Self {
+        debug_assert!((1..64).contains(&n), "rotl amount must be in 1..=63");
         use core::arch::wasm32::{i64x2_shl, u64x2_shr, v128_or};
         U64x2(v128_or(i64x2_shl(self.0, n), u64x2_shr(self.0, 64 - n)))
     }

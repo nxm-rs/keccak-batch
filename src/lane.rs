@@ -60,7 +60,8 @@ pub(crate) unsafe trait Lane: Copy {
     /// Lane-wise `(!self) & o` (Keccak's chi step).
     unsafe fn not_and(self, o: Self) -> Self;
 
-    /// Lane-wise rotate-left by `n`, with `n` in `1..=63`.
+    /// Lane-wise rotate-left by `n`, with `n` in `1..=63` (debug-asserted;
+    /// outside that range the emulated `shl | shr` forms differ per ISA).
     unsafe fn rotl(self, n: u32) -> Self;
 }
 
