@@ -45,7 +45,8 @@ impl Keccak256 {
     }
 
     #[inline]
-    fn absorb_block(state: &mut [u64; 25], block: &[u8; RATE]) {
+    fn absorb_block(state: &mut [u64; 25], block: &[u8]) {
+        debug_assert_eq!(block.len(), RATE);
         for i in 0..RATE / 8 {
             let mut b = [0u8; 8];
             b.copy_from_slice(&block[i * 8..i * 8 + 8]);
@@ -66,16 +67,15 @@ impl Keccak256 {
             self.buf_len += take;
             data = &data[take..];
             if self.buf_len == RATE {
-                let block = self.buf;
-                Self::absorb_block(&mut self.state, &block);
+                Self::absorb_block(&mut self.state, &self.buf);
                 self.buf_len = 0;
             }
         }
 
+        // Bulk path: absorb full blocks straight from the input, no staging
+        // copy through the buffer.
         while data.len() >= RATE {
-            let mut block = [0u8; RATE];
-            block.copy_from_slice(&data[..RATE]);
-            Self::absorb_block(&mut self.state, &block);
+            Self::absorb_block(&mut self.state, &data[..RATE]);
             data = &data[RATE..];
         }
 
