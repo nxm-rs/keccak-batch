@@ -1,0 +1,36 @@
+[package]
+name = "keccak-batch"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.92"
+license = "MIT OR Apache-2.0"
+description = "Batched Keccak-256 (legacy 0x01 padding) with runtime-dispatched SIMD: scalar, 2-way (SSE2/NEON/wasm-simd128), 4-way (AVX2), 8-way (AVX-512)."
+repository = "https://github.com/nxm-rs/keccak-batch"
+readme = "README.md"
+keywords = ["keccak", "simd", "hash", "batch", "swarm"]
+categories = ["cryptography", "no-std"]
+
+[dependencies]
+digest = { version = "0.11", optional = true }
+
+[dev-dependencies]
+tiny-keccak = { version = "2.0", features = ["keccak"] }
+hex-literal = "1.0"
+proptest = "1"
+criterion = "0.7"
+
+[features]
+default = ["digest"]
+# Expose the RustCrypto `digest` trait impls on `Keccak256`.
+digest = ["dep:digest"]
+
+[[bench]]
+name = "keccak"
+harness = false
+
+[profile.release]
+opt-level = 3
+
+[lints.rust]
+unsafe_op_in_unsafe_fn = "deny"
+missing_docs = "warn"
