@@ -52,4 +52,6 @@ jobs:
         with:
           toolchain: nightly
           components: miri
-      - run: cargo miri test
+      # The explicit +nightly outranks the repo rust-toolchain.toml pin, which
+      # would otherwise resolve to stable 1.92 (no miri component there).
+      - run: cargo +nightly miri test
