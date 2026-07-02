@@ -31,6 +31,9 @@ fn read_lane_le(bytes: &[u8], off: usize) -> u64 {
 /// entries in [`crate::dispatch`]).
 #[inline(always)]
 pub(crate) unsafe fn keccak256_batch<L: Lane>(inputs: &[&[u8]], out: &mut [[u8; 32]]) {
+    // Release-mode enforcement of these invariants lives in the public entry
+    // (`keccak256_many_into` asserts equal counts and equal lengths); a
+    // violation here would panic on slice indexing, not read out of bounds.
     let n = L::LANES;
     debug_assert_eq!(inputs.len(), n);
     debug_assert_eq!(out.len(), n);

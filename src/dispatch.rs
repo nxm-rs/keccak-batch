@@ -2,9 +2,10 @@
 //!
 //! The widest backend the running CPU supports is chosen once (cached on x86),
 //! and a batch of inputs is greedily split into 8/4/2/1-wide chunks fed to the
-//! matching `#[target_feature]` entry. Narrower widths are always available
-//! when a wider one is (AVX-512 implies AVX2 implies SSE2), so a chosen chunk
-//! width never exceeds what the CPU provides.
+//! matching `#[target_feature]` entry. Descending to a narrower chunk is always
+//! sound: the 8-wide tier is selected only when avx512f *and* avx2 are both
+//! detected (its 4-wide tail runs the AVX2 kernel), and SSE2 is part of the
+//! x86-64 baseline.
 
 use crate::lane::Scalar;
 use crate::sponge::keccak256_batch;
@@ -143,12 +144,20 @@ fn dispatch(cw: usize, inputs: &[&[u8]], out: &mut [[u8; 32]]) {
 #[cfg(target_arch = "x86_64")]
 fn detected_degree() -> usize {
     use std::sync::atomic::{AtomicU8, Ordering};
+    // Miri cannot execute vendor intrinsics; force the scalar path so the test
+    // suite stays miri-checkable.
+    if cfg!(miri) {
+        return 1;
+    }
     static CACHE: AtomicU8 = AtomicU8::new(0);
     let cached = CACHE.load(Ordering::Relaxed);
     if cached != 0 {
         return cached as usize;
     }
-    let mut d = if is_x86_feature_detected!("avx512f") {
+    // The 8-wide tier requires avx2 as well: a batch tail narrower than 8 is
+    // dispatched to the AVX2 kernel, so degree 8 must guarantee both features
+    // rather than assume avx512f implies avx2.
+    let mut d = if is_x86_feature_detected!("avx512f") && is_x86_feature_detected!("avx2") {
         8
     } else if is_x86_feature_detected!("avx2") {
         4
@@ -257,9 +266,12 @@ mod backend_tests {
     }
 
     /// Widths whose backend is both compiled for this target and supported by
-    /// the running CPU.
+    /// the running CPU. Under miri only the scalar width is executable.
     fn available_widths() -> Vec<usize> {
         let mut w = vec![1usize];
+        if cfg!(miri) {
+            return w;
+        }
         #[cfg(any(
             target_arch = "x86_64",
             target_arch = "aarch64",
