@@ -58,6 +58,23 @@ unsafe impl Lane for U64x8 {
     }
 
     #[inline(always)]
+    unsafe fn chi(self, b: Self, c: Self) -> Self {
+        // vpternlogq with the truth table of f(a,b,c) = a ^ ((!b) & c) fuses the
+        // andnot and xor of one chi output lane into a single instruction.
+        //
+        // imm8 bit i (i = 4a+2b+c, a the MSB) holds f(a,b,c):
+        //   000→0 001→1 010→0 011→0 100→1 101→0 110→1 111→1  = 0b1101_0010 = 0xD2
+        U64x8(unsafe { _mm512_ternarylogic_epi64::<0xD2>(self.0, b.0, c.0) })
+    }
+
+    #[inline(always)]
+    unsafe fn xor3(self, b: Self, c: Self) -> Self {
+        // f(a,b,c) = a ^ b ^ c: parity is 1 for odd popcount of (a,b,c).
+        //   000→0 001→1 010→1 011→0 100→1 101→0 110→0 111→1  = 0b1001_0110 = 0x96
+        U64x8(unsafe { _mm512_ternarylogic_epi64::<0x96>(self.0, b.0, c.0) })
+    }
+
+    #[inline(always)]
     unsafe fn rotl(self, n: u32) -> Self {
         debug_assert!((1..64).contains(&n), "rotl amount must be in 1..=63");
         U64x8(unsafe { _mm512_rolv_epi64(self.0, _mm512_set1_epi64(n as i64)) })

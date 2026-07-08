@@ -55,11 +55,9 @@ pub(crate) unsafe fn keccak_f1600<L: Lane>(mut a: [L; 25]) -> [L; 25] {
             // Theta: column parities, then fold each column's neighbours in.
             let mut c = [a[0]; 5];
             for x in 0..5 {
-                c[x] = a[x]
-                    .xor(a[x + 5])
-                    .xor(a[x + 10])
-                    .xor(a[x + 15])
-                    .xor(a[x + 20]);
+                // Column parity of five lanes as two fused three-input xors;
+                // backends with `vpternlogq` retire each in one instruction.
+                c[x] = a[x].xor3(a[x + 5], a[x + 10]).xor3(a[x + 15], a[x + 20]);
             }
             for x in 0..5 {
                 let d = c[(x + 4) % 5].xor(c[(x + 1) % 5].rotl(1));
@@ -148,7 +146,7 @@ pub(crate) unsafe fn keccak_f1600<L: Lane>(mut a: [L; 25]) -> [L; 25] {
                 let row = y * 5;
                 let r = [a[row], a[row + 1], a[row + 2], a[row + 3], a[row + 4]];
                 for x in 0..5 {
-                    a[row + x] = r[x].xor(r[(x + 1) % 5].not_and(r[(x + 2) % 5]));
+                    a[row + x] = r[x].chi(r[(x + 1) % 5], r[(x + 2) % 5]);
                 }
             }
 
