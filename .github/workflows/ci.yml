@@ -20,7 +20,7 @@ jobs:
           toolchain: "1.92"
           components: rustfmt, clippy
           targets: wasm32-unknown-unknown, wasm32-wasip1
-      - uses: taiki-e/install-action@16b05812d776ae1dfaabc8277e421fb6d2506419 # v2.82.7
+      - uses: taiki-e/install-action@ed67fa35ac944f3a9b33f12c4dd43b6f31a47e20 # v2.83.3
         with:
           tool: cargo-shear
       - run: cargo fmt --all --check
