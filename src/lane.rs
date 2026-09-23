@@ -60,6 +60,23 @@ pub(crate) unsafe trait Lane: Copy {
     /// Lane-wise `(!self) & o` (Keccak's chi step).
     unsafe fn not_and(self, o: Self) -> Self;
 
+    /// Lane-wise `self ^ ((!b) & c)` — one output lane of Keccak's chi step.
+    ///
+    /// Default is the two-op `xor`∘`not_and` form. Backends with a fused
+    /// three-input boolean op (AVX-512 `vpternlogq`) override this to collapse
+    /// the andnot and xor into a single instruction.
+    #[inline(always)]
+    unsafe fn chi(self, b: Self, c: Self) -> Self {
+        unsafe { self.xor(b.not_and(c)) }
+    }
+
+    /// Lane-wise `self ^ b ^ c`. Default chains two `xor`s; AVX-512 fuses the
+    /// pair into one `vpternlogq`, halving the theta column-parity op count.
+    #[inline(always)]
+    unsafe fn xor3(self, b: Self, c: Self) -> Self {
+        unsafe { self.xor(b).xor(c) }
+    }
+
     /// Lane-wise rotate-left by `n`, with `n` in `1..=63` (debug-asserted;
     /// outside that range the emulated `shl | shr` forms differ per ISA).
     unsafe fn rotl(self, n: u32) -> Self;
